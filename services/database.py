@@ -10,6 +10,13 @@ def get_conn():
     return sqlite3.connect(DB_PATH)
 
 
+def ensure_column(conn, table_name, column_name, column_type):
+    cols = pd.read_sql(f"PRAGMA table_info({table_name})", conn)
+    if column_name not in cols["name"].tolist():
+        conn.execute(
+            f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
+
+
 def init_db():
     conn = get_conn()
     cursor = conn.cursor()
@@ -32,7 +39,6 @@ def init_db():
         peso_total REAL,
         quantidade_total REAL,
         capacidade_tipo REAL,
-        capacidade_total_filial REAL,
         ocupacao_percentual REAL
     )
     """)
@@ -54,6 +60,12 @@ def init_db():
         corte_animal TEXT
     )
     """)
+
+    conn.commit()
+
+    # migrações automáticas
+    ensure_column(conn, "estoque_resumo", "capacidade_total", "REAL")
+    ensure_column(conn, "estoque_detalhe", "corte_animal", "TEXT")
 
     conn.commit()
     conn.close()
