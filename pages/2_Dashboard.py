@@ -350,12 +350,10 @@ r1, r2 = st.columns([1.1, 1.3])
 with r1:
     st.markdown("<div class='panel'><div class='panel-title'>CONDIÇÃO X CAPACIDADE X OCUPAÇÃO</div>", unsafe_allow_html=True)
 
-    # base detalhada para estoque por espécie
     ocup_especie = detail_f.groupby(["tipo_estoque", "corte_animal"], as_index=False).agg(
         OCUPAÇÃO=("peso_liquido", "sum")
     )
 
-    # capacidade vem do resumo, sem duplicar por espécie
     cap_tipo = summary_f.groupby("tipo_estoque", as_index=False).agg(
         CAPACIDADE=("capacidade_tipo", "sum")
     )

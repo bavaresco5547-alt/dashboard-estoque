@@ -14,7 +14,7 @@ if file:
 
     if st.button("Processar arquivo"):
         try:
-            # LEITURA FIXA NO PADRÃO DO Pasta1.xlsx
+            # padrão do arquivo original
             df = pd.read_excel(file, sheet_name="FJ Sistemas", header=3)
 
             df.columns = [str(c).strip().lower() for c in df.columns]
@@ -29,16 +29,24 @@ if file:
                 "peso liquido": "peso_liquido",
                 "validade": "validade",
                 "producao": "producao",
+                "corte": "corte",
             })
 
             colunas_obrigatorias = [
                 "filial", "grupo", "subgrupo", "id_produto", "descricao",
-                "quantidade", "peso_liquido", "validade", "producao"
+                "quantidade", "peso_liquido"
             ]
 
             faltando = [c for c in colunas_obrigatorias if c not in df.columns]
             if faltando:
                 raise ValueError(f"Colunas obrigatórias ausentes: {', '.join(faltando)}")
+
+            if "validade" not in df.columns:
+                df["validade"] = None
+            if "producao" not in df.columns:
+                df["producao"] = None
+            if "corte" not in df.columns:
+                df["corte"] = None
 
             df = df[df["filial"].notna()].copy()
 
@@ -55,14 +63,17 @@ if file:
                 product_map_df=None
             )
 
-            save_upload(file.name, data_ref)
-            save_detalhe(detalhe)
-            save_resumo(resumo)
+            upload_id = save_upload(file.name, data_ref)
+            save_detalhe(detalhe, upload_id)
+            save_resumo(resumo, upload_id)
 
             peso_total_lido = pd.to_numeric(df["peso_liquido"], errors="coerce").fillna(0).sum()
 
             st.success("Arquivo processado com sucesso 🚀")
-            st.info(f"Peso total lido do arquivo: {peso_total_lido:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+            st.info(
+                "Peso total lido do arquivo: "
+                + f"{peso_total_lido:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            )
 
             with st.expander("Prévia do resumo gerado"):
                 st.dataframe(resumo, use_container_width=True, hide_index=True)
