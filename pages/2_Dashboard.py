@@ -5,9 +5,6 @@ from services.database import load_latest_detail, load_latest_summary, load_uplo
 
 st.set_page_config(page_title="Dashboard Estoque", layout="wide")
 
-# =========================
-# CONFIG / REGRAS
-# =========================
 CD_FILIAIS_BASE = [
     "BELO HORIZONTE",
     "BENEVIDES - PA",
@@ -25,10 +22,6 @@ CD_FILIAIS_BASE = [
     "SAO LOURENCO",
     "SAO LOURENÇO",
 ]
-
-# =========================
-# FUNÇÕES
-# =========================
 
 
 def normalizar_texto(txt):
@@ -70,9 +63,6 @@ def fmt_pct(v):
         return "0%"
 
 
-# =========================
-# ESTILO
-# =========================
 st.markdown("""
 <style>
 .stApp {
@@ -167,9 +157,6 @@ div[data-testid="stDataFrame"] {
 </style>
 """, unsafe_allow_html=True)
 
-# =========================
-# DADOS
-# =========================
 uploads = load_uploads()
 summary = load_latest_summary()
 detail = load_latest_detail()
@@ -213,9 +200,6 @@ else:
     nome_arquivo = ""
     data_ref = ""
 
-# =========================
-# CABEÇALHO
-# =========================
 st.markdown(f"""
 <div class="hero">
     <div class="hero-title">ESTOQUE X CAPACIDADE - PAINEL DIRETORIA</div>
@@ -224,9 +208,6 @@ st.markdown(f"""
 <div class="top-line"></div>
 """, unsafe_allow_html=True)
 
-# =========================
-# FILTROS
-# =========================
 filiais_existentes = sorted(summary["filial"].dropna().unique().tolist())
 filiais_cd_existentes = [
     f for f in filiais_existentes if classificar_cd_fab(f) == "CD"]
@@ -271,7 +252,6 @@ if grupo != "TODOS":
     summary_f = summary_f.merge(
         combinacoes, on=["filial", "tipo_estoque"], how="inner")
 
-# remove zerados
 summary_f = summary_f[summary_f["peso_total"] > 0].copy()
 detail_f = detail_f[detail_f["peso_liquido"] > 0].copy()
 
@@ -279,9 +259,6 @@ if summary_f.empty:
     st.warning("Nenhum dado encontrado com os filtros selecionados.")
     st.stop()
 
-# =========================
-# KPIS
-# =========================
 total = summary_f["peso_total"].sum()
 congelado = summary_f.loc[summary_f["tipo_estoque"].str.upper(
 ) == "CONGELADO", "peso_total"].sum()
@@ -313,14 +290,12 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# =========================
-# BASES ORDENADAS E SEM ZERADOS
-# =========================
 tipo_df = (
     summary_f.groupby("tipo_estoque", as_index=False)
     .agg(ESTOQUE=("peso_total", "sum"))
     .query("ESTOQUE > 0")
     .sort_values("ESTOQUE", ascending=False)
+    .reset_index(drop=True)
 )
 
 grupo_df = (
@@ -328,6 +303,7 @@ grupo_df = (
     .agg(ESTOQUE=("peso_liquido", "sum"))
     .query("ESTOQUE > 0")
     .sort_values("ESTOQUE", ascending=False)
+    .reset_index(drop=True)
 )
 
 estoque_filial = (
@@ -350,9 +326,10 @@ resumo_filial["% OCUPAÇÃO"] = resumo_filial.apply(
                  100) if row["CAPACIDADE"] > 0 else 0,
     axis=1
 )
-resumo_filial = resumo_filial.sort_values("ESTOQUE", ascending=False)
+resumo_filial = resumo_filial.sort_values(
+    "% OCUPAÇÃO", ascending=False).reset_index(drop=True)
 
-bar_filial = resumo_filial.copy().sort_values("% OCUPAÇÃO", ascending=False)
+bar_filial = resumo_filial.copy()
 
 cond_df = (
     detail_f.groupby(["tipo_estoque", "corte_animal"], as_index=False)
@@ -374,9 +351,12 @@ cond_df["%"] = cond_df.apply(
                  100) if row["CAPACIDADE"] > 0 else 0,
     axis=1
 )
-cond_df = cond_df.rename(
-    columns={"tipo_estoque": "CONDIÇÃO", "corte_animal": "GRUPO"})
-cond_df = cond_df.sort_values("OCUPAÇÃO", ascending=False)
+cond_df = (
+    cond_df.rename(
+        columns={"tipo_estoque": "CONDIÇÃO", "corte_animal": "GRUPO"})
+    .sort_values("OCUPAÇÃO", ascending=False)
+    .reset_index(drop=True)
+)
 
 cd_fab_resumo = (
     summary_f.groupby("tipo_unidade", as_index=False)
@@ -392,12 +372,12 @@ cd_fab_resumo["% OCUPAÇÃO"] = cd_fab_resumo.apply(
                  100) if row["CAPACIDADE"] > 0 else 0,
     axis=1
 )
-cd_fab_resumo = cd_fab_resumo.rename(
-    columns={"tipo_unidade": "VISÃO"}).sort_values("ESTOQUE", ascending=False)
+cd_fab_resumo = (
+    cd_fab_resumo.rename(columns={"tipo_unidade": "VISÃO"})
+    .sort_values("ESTOQUE", ascending=False)
+    .reset_index(drop=True)
+)
 
-# =========================
-# LINHA PRINCIPAL
-# =========================
 c1, c2 = st.columns([1.05, 1.35])
 
 with c1:
@@ -469,7 +449,8 @@ with c2:
             margin=dict(l=10, r=25, t=10, b=10),
             height=max(360, len(bar_filial) * 34),
             xaxis_title="% ocupação",
-            yaxis_title=""
+            yaxis_title="",
+            yaxis=dict(autorange="reversed")
         )
         st.plotly_chart(fig2, use_container_width=True)
 
@@ -483,9 +464,6 @@ with c2:
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-# =========================
-# LINHA SECUNDÁRIA
-# =========================
 r1, r2 = st.columns([1.1, 1.3])
 
 with r1:
@@ -515,9 +493,6 @@ with r2:
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-# =========================
-# CD X FAB
-# =========================
 st.markdown("<div class='panel'><div class='panel-title'>ESTOQUE X CAPACIDADE - CD X FAB</div>",
             unsafe_allow_html=True)
 
@@ -530,9 +505,6 @@ st.dataframe(cdfab_show[["VISÃO", "ESTOQUE", "CAPACIDADE",
 
 st.markdown("</div>", unsafe_allow_html=True)
 
-# =========================
-# DETALHE
-# =========================
 with st.expander("Ver detalhe dos itens"):
     cols_detalhe = [c for c in [
         "filial", "tipo_unidade", "tipo_estoque", "corte_animal",
