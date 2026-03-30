@@ -32,6 +32,7 @@ def init_db():
         peso_total REAL,
         quantidade_total REAL,
         capacidade_tipo REAL,
+        capacidade_total_filial REAL,
         ocupacao_percentual REAL
     )
     """)
@@ -138,8 +139,3 @@ def load_latest_detail():
         df = pd.DataFrame()
     conn.close()
     return df
-
-
-def reset_db():
-    if DB_PATH.exists():
-        DB_PATH.unlink()

@@ -123,6 +123,8 @@ summary["peso_total"] = pd.to_numeric(
     summary["peso_total"], errors="coerce").fillna(0)
 summary["capacidade_tipo"] = pd.to_numeric(
     summary["capacidade_tipo"], errors="coerce").fillna(0)
+summary["capacidade_total"] = pd.to_numeric(
+    summary.get("capacidade_total", 0), errors="coerce").fillna(0)
 detail["peso_liquido"] = pd.to_numeric(detail.get(
     "peso_liquido", 0), errors="coerce").fillna(0)
 
@@ -201,7 +203,9 @@ resfriado = summary_f.loc[summary_f["tipo_estoque"].str.upper(
 ambiente = summary_f.loc[summary_f["tipo_estoque"].str.upper(
 ) == "AMBIENTE", "peso_total"].sum()
 
-capacidade_total = summary_f["capacidade_tipo"].sum()
+# usa capacidade total da filial, sem perder ambiente não usado no resumo
+capacidade_total = summary_f.groupby("filial", as_index=False)[
+    "capacidade_total"].max()["capacidade_total"].sum()
 ocupacao_total_pct = (total / capacidade_total *
                       100) if capacidade_total > 0 else 0
 
@@ -230,7 +234,7 @@ estoque_filial = summary_f.groupby(["filial", "tipo_unidade"], as_index=False).a
 )
 
 capacidade_filial = summary_f.groupby(["filial"], as_index=False).agg(
-    capacidade_total=("capacidade_tipo", "sum")
+    capacidade_total=("capacidade_total", "max")
 )
 
 bar_filial = estoque_filial.merge(capacidade_filial, on="filial", how="left")
@@ -425,7 +429,7 @@ st.markdown("<div class='panel'><div class='panel-title'>ESTOQUE X CAPACIDADE - 
 estoque_cdfab = summary_f.groupby(
     "tipo_unidade", as_index=False).agg(ESTOQUE=("peso_total", "sum"))
 cap_cdfab = summary_f.groupby("tipo_unidade", as_index=False).agg(
-    CAPACIDADE=("capacidade_tipo", "sum"))
+    CAPACIDADE=("capacidade_total", "max"))
 cd_fab_resumo = estoque_cdfab.merge(cap_cdfab, on="tipo_unidade", how="left")
 cd_fab_resumo["% OCUPAÇÃO"] = cd_fab_resumo.apply(
     lambda row: (row["ESTOQUE"] / row["CAPACIDADE"] *
