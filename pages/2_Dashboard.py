@@ -493,15 +493,35 @@ with r2:
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown("<div class='panel'><div class='panel-title'>ESTOQUE X CAPACIDADE - CD X FAB</div>",
+st.markdown("<div class='panel'><div class='panel-title'>ESTOQUE X CAPACIDADE</div>",
             unsafe_allow_html=True)
 
-cdfab_show = cd_fab_resumo.copy()
-cdfab_show["ESTOQUE"] = cdfab_show["ESTOQUE"].apply(fmt_num)
-cdfab_show["CAPACIDADE"] = cdfab_show["CAPACIDADE"].apply(fmt_num)
-cdfab_show["% OCUPAÇÃO"] = cdfab_show["% OCUPAÇÃO"].apply(fmt_pct)
-st.dataframe(cdfab_show[["VISÃO", "ESTOQUE", "CAPACIDADE",
-             "% OCUPAÇÃO"]], use_container_width=True, hide_index=True)
+capacidade_total_bloco = (
+    summary_f.groupby("filial", as_index=False)["capacidade_total"]
+    .max()["capacidade_total"]
+    .sum()
+)
+
+estoque_total_bloco = summary_f["peso_total"].sum()
+
+ocupacao_total_bloco = (
+    (estoque_total_bloco / capacidade_total_bloco) * 100
+    if capacidade_total_bloco > 0 else 0
+)
+
+bloco_estoque_capacidade = pd.DataFrame([{
+    "ESTOQUE": fmt_num(estoque_total_bloco),
+    "CAPACIDADE": fmt_num(capacidade_total_bloco),
+    "% OCUPAÇÃO": fmt_pct(ocupacao_total_bloco)
+}])
+
+st.dataframe(
+    bloco_estoque_capacidade,
+    use_container_width=True,
+    hide_index=True
+)
+
+st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
 
